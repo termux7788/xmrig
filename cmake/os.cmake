@@ -1,3 +1,7 @@
+if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+    add_definitions(/DXMRIG_64_BIT)
+endif()
+
 if (WIN32)
     set(XMRIG_OS_WIN ON)
 elseif (APPLE)
@@ -32,6 +36,10 @@ elseif(XMRIG_OS_APPLE)
     else()
         add_definitions(/DXMRIG_OS_MACOS)
     endif()
+
+    if (XMRIG_ARM)
+        set(WITH_SECURE_JIT ON)
+    endif()
 elseif(XMRIG_OS_UNIX)
     add_definitions(/DXMRIG_OS_UNIX)
 
@@ -42,4 +50,8 @@ elseif(XMRIG_OS_UNIX)
     elseif (XMRIG_OS_FREEBSD)
         add_definitions(/DXMRIG_OS_FREEBSD)
     endif()
+endif()
+
+if (WITH_SECURE_JIT)
+    add_definitions(/DXMRIG_SECURE_JIT)
 endif()

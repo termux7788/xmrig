@@ -125,12 +125,8 @@ struct RandomX_ConfigurationBase
 	rx_vec_i128 fillAes4Rx4_Key[8];
 
 	uint8_t codeShhPrefetchTweaked[20];
-	uint8_t codeReadDatasetTweaked[64];
-	uint32_t codeReadDatasetTweakedSize;
-	uint8_t codeReadDatasetRyzenTweaked[72];
-	uint32_t codeReadDatasetRyzenTweakedSize;
-	uint8_t codeReadDatasetLightSshInitTweaked[68];
-	uint8_t codePrefetchScratchpadTweaked[32];
+	uint8_t codePrefetchScratchpadTweaked[28];
+	uint32_t codePrefetchScratchpadTweakedSize;
 
 	uint32_t AddressMask_Calculated[4];
 	uint32_t ScratchpadL3Mask_Calculated;
@@ -170,6 +166,7 @@ void randomx_apply_config(const T& config)
 
 void randomx_set_scratchpad_prefetch_mode(int mode);
 void randomx_set_huge_pages_jit(bool hugePages);
+void randomx_set_optimized_dataset_init(int value);
 
 #if defined(__cplusplus)
 extern "C" {

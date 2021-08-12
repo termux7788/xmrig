@@ -81,6 +81,7 @@ public:
 
     inline void start(const std::vector<CpuLaunchData> &threads, size_t memory)
     {
+        m_workersMemory.clear();
         m_hugePages.reset();
         m_memory    = memory;
         m_started   = 0;
@@ -95,8 +96,10 @@ public:
         if (ready) {
             m_started++;
 
-            m_hugePages += worker->memory()->hugePages();
-            m_ways      += worker->intensity();
+            if (m_workersMemory.insert(worker->memory()).second) {
+                m_hugePages += worker->memory()->hugePages();
+            }
+            m_ways += worker->intensity();
         }
         else {
             m_errors++;
@@ -126,6 +129,7 @@ public:
     }
 
 private:
+    std::set<const VirtualMemory*> m_workersMemory;
     HugePagesInfo m_hugePages;
     size_t m_errors       = 0;
     size_t m_memory       = 0;
@@ -266,6 +270,12 @@ bool xmrig::CpuBackend::isEnabled(const Algorithm &algorithm) const
 }
 
 
+bool xmrig::CpuBackend::tick(uint64_t ticks)
+{
+    return d_ptr->workers.tick(ticks);
+}
+
+
 const xmrig::Hashrate *xmrig::CpuBackend::hashrate() const
 {
     return d_ptr->workers.hashrate();
@@ -316,21 +326,19 @@ void xmrig::CpuBackend::printHashrate(bool details)
          Log::print("| %8zu | %8" PRId64 " | %7s | %7s | %7s |",
                     i,
                     data.affinity,
-                    Hashrate::format(hashrate()->calc(i + 1, Hashrate::ShortInterval),  num,         sizeof num / 3),
-                    Hashrate::format(hashrate()->calc(i + 1, Hashrate::MediumInterval), num + 8,     sizeof num / 3),
-                    Hashrate::format(hashrate()->calc(i + 1, Hashrate::LargeInterval),  num + 8 * 2, sizeof num / 3)
+                    Hashrate::format(hashrate()->calc(i, Hashrate::ShortInterval),  num,         sizeof num / 3),
+                    Hashrate::format(hashrate()->calc(i, Hashrate::MediumInterval), num + 8,     sizeof num / 3),
+                    Hashrate::format(hashrate()->calc(i, Hashrate::LargeInterval),  num + 8 * 2, sizeof num / 3)
                     );
 
          i++;
     }
 
-#   ifdef XMRIG_FEATURE_OPENCL
     Log::print(WHITE_BOLD_S "|        - |        - | %7s | %7s | %7s |",
                Hashrate::format(hashrate()->calc(Hashrate::ShortInterval),  num,         sizeof num / 3),
                Hashrate::format(hashrate()->calc(Hashrate::MediumInterval), num + 8,     sizeof num / 3),
                Hashrate::format(hashrate()->calc(Hashrate::LargeInterval),  num + 8 * 2, sizeof num / 3)
                );
-#   endif
 }
 
 
@@ -347,13 +355,7 @@ void xmrig::CpuBackend::setJob(const Job &job)
 
     const auto &cpu = d_ptr->controller->config()->cpu();
 
-#   ifdef XMRIG_FEATURE_BENCHMARK
-    const uint32_t benchSize = BenchState::size();
-#   else
-    constexpr uint32_t benchSize = 0;
-#   endif
-
-    auto threads = cpu.get(d_ptr->controller->miner(), job.algorithm(), benchSize);
+    auto threads = cpu.get(d_ptr->controller->miner(), job.algorithm());
     if (!d_ptr->threads.empty() && d_ptr->threads.size() == threads.size() && std::equal(d_ptr->threads.begin(), d_ptr->threads.end(), threads.begin())) {
         return;
     }
@@ -370,7 +372,7 @@ void xmrig::CpuBackend::setJob(const Job &job)
     stop();
 
 #   ifdef XMRIG_FEATURE_BENCHMARK
-    if (benchSize) {
+    if (BenchState::size()) {
         d_ptr->benchmark = std::make_shared<Benchmark>(threads.size(), this);
     }
 #   endif
@@ -408,12 +410,6 @@ void xmrig::CpuBackend::stop()
     d_ptr->threads.clear();
 
     LOG_INFO("%s" YELLOW(" stopped") BLACK_BOLD(" (%" PRIu64 " ms)"), Tags::cpu(), Chrono::steadyMSecs() - ts);
-}
-
-
-bool xmrig::CpuBackend::tick(uint64_t ticks)
-{
-    return d_ptr->workers.tick(ticks);
 }
 
 

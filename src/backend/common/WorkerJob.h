@@ -85,9 +85,10 @@ public:
     }
 
 
+    inline int32_t nonceOffset() const { return currentJob().nonceOffset(); }
+    inline size_t nonceSize() const { return currentJob().nonceSize(); }
+
 private:
-    inline int32_t nonceOffset() const  { return currentJob().nonceOffset(); }
-    inline size_t nonceSize() const     { return currentJob().nonceSize(); }
     inline uint64_t nonceMask() const     { return m_nonce_mask[index()]; }
 
     inline void save(const Job &job, uint32_t reserveCount, Nonce::Backend backend)
@@ -110,7 +111,7 @@ private:
     alignas(16) uint8_t m_blobs[2][Job::kMaxBlobSize * N]{};
     Job m_jobs[2];
     uint32_t m_rounds[2] = { 0, 0 };
-    uint64_t m_nonce_mask[2];
+    uint64_t m_nonce_mask[2] = { 0, 0 };
     uint64_t m_sequence  = 0;
     uint8_t m_index      = 0;
 };

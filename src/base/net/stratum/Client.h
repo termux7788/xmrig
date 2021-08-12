@@ -6,8 +6,8 @@
  * Copyright 2016      Jay D Dee   <jayddee246@gmail.com>
  * Copyright 2017-2018 XMR-Stak    <https://github.com/fireice-uk>, <https://github.com/psychocrypt>
  * Copyright 2019      jtgrassie   <https://github.com/jtgrassie>
- * Copyright 2018-2020 SChernykh   <https://github.com/SChernykh>
- * Copyright 2016-2020 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
+ * Copyright 2018-2021 SChernykh   <https://github.com/SChernykh>
+ * Copyright 2016-2021 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
  *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -50,6 +50,7 @@ using BIO = struct bio_st;
 namespace xmrig {
 
 
+class DnsRequest;
 class IClientListener;
 class JobResult;
 
@@ -79,7 +80,7 @@ protected:
     void deleteLater() override;
     void tick(uint64_t now) override;
 
-    void onResolved(const Dns &dns, int status) override;
+    void onResolved(const DnsRecords &records, int status, const char *error) override;
 
     inline bool hasExtension(Extension extension) const noexcept override   { return m_extensions.test(extension); }
     inline const char *mode() const override                                { return "pool"; }
@@ -108,7 +109,7 @@ private:
     bool write(const uv_buf_t &buf);
     int resolve(const String &host);
     int64_t send(size_t size);
-    void connect(sockaddr *addr);
+    void connect(const sockaddr *addr);
     void handshake();
     void parse(char *line, size_t len);
     void parseExtensions(const rapidjson::Value &result);
@@ -131,11 +132,12 @@ private:
     static inline Client *getClient(void *data) { return m_storage.get(data); }
 
     const char *m_agent;
-    Dns *m_dns;
     LineReader m_reader;
     Socks5 *m_socks5            = nullptr;
     std::bitset<EXT_MAX> m_extensions;
+    std::shared_ptr<DnsRequest> m_dns;
     std::vector<char> m_sendBuf;
+    std::vector<char> m_tempBuf;
     String m_rpcId;
     Tls *m_tls                  = nullptr;
     uint64_t m_expire           = 0;
